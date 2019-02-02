@@ -14,14 +14,6 @@ add_executable(
 target_link_libraries(
     hyriseServer
     ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${CMAKE_DL_LIBS}
-)
-target_include_directories(
-    hyriseServer
-
-    PUBLIC
-    ${Boost_INCLUDE_DIRS}
 )
 
 # Configure playground
@@ -46,6 +38,7 @@ target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
 # Configure client
 add_executable(
     hyriseClient
+
     client.cpp
     client.hpp
 )
@@ -70,7 +63,6 @@ target_link_libraries(
     hyriseBenchmarkLib
     ncurses
     ${READLINE_LIBRARY}
-    ${CMAKE_DL_LIBS}
 )
 target_include_directories(
     hyriseConsole
