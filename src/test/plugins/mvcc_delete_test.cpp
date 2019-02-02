@@ -2,8 +2,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "base_test.hpp"
 #include "../../plugins/mvcc_delete_plugin.hpp"
+#include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/update.hpp"
