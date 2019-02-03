@@ -12,6 +12,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
+#include "thread"
 #include "types.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/timer.hpp"
@@ -24,10 +25,12 @@
 
 void setup();
 void run_benchmark(bool use_plugin, size_t updates, size_t interval, std::string filename);
+void test_concurrent_updates(size_t update_count, size_t thread_count);
 
 using namespace opossum;  // NOLINT
 
 int main() {
+  /*
   setup();
   run_benchmark(true, 200'000, 1000, "benchmark1.csv");
 
@@ -35,6 +38,8 @@ int main() {
 
   setup();
   run_benchmark(false, 200'000, 1000, "benchmark2.csv");
+  */
+  test_concurrent_updates(10'000, 2);
   return 0;
 }
 
@@ -115,4 +120,65 @@ void setup() {
 
   auto& sm = StorageManager::get();
   sm.add_table("mvcc_benchmark", table);
+}
+
+void test_concurrent_updates(size_t update_count, size_t thread_count) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("number", data_type_from_type<int>());
+
+  std::vector<int> vec;
+  vec.emplace_back(0);
+
+  Segments segments;
+  segments.emplace_back(std::make_shared<ValueSegment<int>>(std::move(vec)));
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 20, UseMvcc::Yes);
+  table->append_chunk(segments);
+
+  auto& sm = StorageManager::get();
+  sm.add_table("concurrency_test", table);
+
+  auto update_func = [](size_t count) {
+    auto& tm = TransactionManager::get();
+    auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
+    const auto expr = expression_functional::equals_(column, 0);
+
+    for (size_t i = 0; i < count; i++) {
+      const auto transaction_context = tm.new_transaction_context();
+
+      const auto gt = std::make_shared<GetTable>("concurrency_test");
+      gt->set_transaction_context(transaction_context);
+
+      const auto validate = std::make_shared<Validate>(gt);
+      validate->set_transaction_context(transaction_context);
+
+      const auto where = std::make_shared<TableScan>(validate, expr);
+      where->set_transaction_context(transaction_context);
+
+      const auto update = std::make_shared<Update>("concurrency_test", where, where);
+      update->set_transaction_context(transaction_context);
+
+      gt->execute();
+      validate->execute();
+      where->execute();
+      update->execute();
+
+      if (update->execute_failed()) {
+        std::cout << "Execution with tid " << transaction_context->transaction_id() << " failed." << std::endl;
+        transaction_context->rollback();
+      }
+      else {
+        transaction_context->commit();
+      }
+    }
+  };
+
+  std::vector<std::thread> threads;
+  for (size_t i = 0; i < thread_count; i++) {
+    threads.emplace_back(std::thread([&](){update_func(update_count);}));
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
 }
