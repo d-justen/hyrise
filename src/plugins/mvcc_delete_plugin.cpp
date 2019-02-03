@@ -37,11 +37,13 @@ void MvccDeletePlugin::stop() {
  */
 void MvccDeletePlugin::_logical_delete_loop() {
   for (auto& [table_name, table] : _sm.tables()) {
-    const auto& chunks = table->chunks();
 
-    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size() - 1; chunk_id++) {
-      const auto& chunk = chunks[chunk_id];
-      // Only immutable chunks are designated for cleanup
+    // Check all chunks, except for the last one, which is currently used for insertions
+    if (table->chunk_count() == 1) return;
+    ChunkID max_chunk_id_to_check = static_cast<ChunkID>(table->chunk_count() - 2);
+
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id <= max_chunk_id_to_check; chunk_id++) {
+      const auto& chunk = table->get_chunk(chunk_id);
       if (chunk && chunk->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID) {
         // Calculate metric
         double rate_of_invalidated_rows = static_cast<double>(chunk->invalid_row_count())
