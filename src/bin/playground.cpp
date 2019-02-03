@@ -30,7 +30,7 @@ void test_concurrent_updates(size_t update_count, size_t thread_count);
 using namespace opossum;  // NOLINT
 
 int main() {
-  /*
+
   setup();
   run_benchmark(true, 200'000, 1000, "benchmark1.csv");
 
@@ -38,8 +38,8 @@ int main() {
 
   setup();
   run_benchmark(false, 200'000, 1000, "benchmark2.csv");
-  */
-  test_concurrent_updates(10'000, 2);
+
+  //test_concurrent_updates(10'000, 2);
   return 0;
 }
 
