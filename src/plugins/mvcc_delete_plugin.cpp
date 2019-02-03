@@ -48,11 +48,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
         // Calculate metric
         double rate_of_invalidated_rows = static_cast<double>(chunk->invalid_row_count())
                                           / static_cast<double>(chunk->size());
-        std::cout << "rate_of_invalidated_rows: " << rate_of_invalidated_rows << " invalid_row_count: " << chunk->invalid_row_count() << " chunk_size: " << chunk->size() << std::endl;
         // Evaluate metric
         if (_rate_of_invalidated_rows_threshold <= rate_of_invalidated_rows) {
-          std::cout << "-> trigger chunk-delete" << std::endl;
-          // Trigger logical delete
           _delete_chunk(table_name, chunk_id);
         }
       }
@@ -100,7 +97,6 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   const auto& chunk = table->get_chunk(chunk_id);
 
   DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
-  // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
   DebugAssert(chunk_id < (table->chunk_count() - 1),
               "MVCC Logical Delete should not be applied on the last/current mutable chunk.")
 
