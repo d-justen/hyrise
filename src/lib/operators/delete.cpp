@@ -104,10 +104,13 @@ void Delete::_on_commit_records(const CommitID cid) {
     }
 
     // Update statistics about deleted rows
+    auto invalidated_row_count = referencing_segment->pos_list()->size();
+
     const auto table_statistics = referenced_table->table_statistics();
     if (table_statistics) {
-      table_statistics->increase_invalid_row_count(referencing_segment->pos_list()->size());
+      table_statistics->increase_invalid_row_count(invalidated_row_count);
     }
+    referencing_chunk->increase_invalid_row_count(invalidated_row_count);
   }
 }
 
