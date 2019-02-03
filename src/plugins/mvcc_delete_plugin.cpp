@@ -97,9 +97,10 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   const auto& table = StorageManager::get().get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 
-  DebugAssert(chunk != nullptr, "Chunk does not exist. MVCC Logical Delete can not be applied.")
-  DebugAssert(!chunk->is_mutable(),
-              "MVCC Logical Delete is not meant to be applied on mutable chunks.")
+  DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
+  // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
+  DebugAssert(chunk_id < (table->chunk_count() - 1),
+              "MVCC Logical Delete should not be applied on the last/current mutable chunk.")
 
   // Create temporary referencing table that contains the given chunk only
   auto transaction_context = TransactionManager::get().new_transaction_context();
