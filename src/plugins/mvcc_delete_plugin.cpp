@@ -44,7 +44,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
       // Only immutable chunks are designated for cleanup
       if (chunk && chunk->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID) {
         // Evaluate metric
-        if (_invalidated_rows_amount(chunk) >= _delete_threshold_share_invalidated_rows) {
+        if (chunk->invalid_row_count() >= _delete_threshold_share_invalidated_rows) {
           // Trigger logical delete
           _delete_chunk(table_name, chunk_id);
         }
@@ -161,16 +161,6 @@ bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, c
     // Chunk might still be in use. Wait with physical delete.
     return false;
   }
-}
-
-double MvccDeletePlugin::_invalidated_rows_amount(const std::shared_ptr<Chunk> chunk) const {
-  const auto chunk_size = chunk->size();
-  const auto end_cids = chunk->mvcc_data()->end_cids;
-  CommitID invalid_count = 0;
-  for (size_t i = 0; i < chunk_size; i++) {
-    if (end_cids[i] < MvccData::MAX_COMMIT_ID) invalid_count++;
-  }
-  return static_cast<double>(invalid_count) / chunk_size;
 }
 
 EXPORT_PLUGIN(MvccDeletePlugin)

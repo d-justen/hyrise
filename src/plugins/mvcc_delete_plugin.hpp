@@ -37,7 +37,6 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   void _delete_chunk(const std::string& table_name, ChunkID chunk_id);
   static bool _delete_chunk_logically(const std::string& table_name, ChunkID chunk_id);
   static bool _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id);
-  double _invalidated_rows_amount(std::shared_ptr<Chunk> chunk) const;
 
   static std::shared_ptr<const Table> _get_referencing_table(const std::string& table_name, ChunkID chunk_id);
 
