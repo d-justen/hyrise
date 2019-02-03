@@ -12,7 +12,7 @@ namespace opossum {
 
 MvccDeletePlugin::MvccDeletePlugin()
     : _sm(StorageManager::get()),
-      _delete_threshold_share_invalidated_rows(0),
+      _delete_threshold_share_invalidated_rows(0.5),
       _idle_delay_logical_delete(std::chrono::milliseconds(1000)),
       _idle_delay_physical_delete(std::chrono::milliseconds(1000)) {}
 
@@ -44,7 +44,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
       // Only immutable chunks are designated for cleanup
       if (chunk && chunk->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID) {
         // Evaluate metric
-        if (chunk->invalid_row_count() >= _delete_threshold_share_invalidated_rows) {
+        const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
+        if (invalid_row_amount >= _delete_threshold_share_invalidated_rows) {
           // Trigger logical delete
           _delete_chunk(table_name, chunk_id);
         }

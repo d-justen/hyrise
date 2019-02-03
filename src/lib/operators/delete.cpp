@@ -111,7 +111,8 @@ void Delete::_on_commit_records(const CommitID cid) {
 
     const auto num_rows_deleted = _num_rows_deleted_per_chunk.find(referencing_chunk_id);
     if (num_rows_deleted != _num_rows_deleted_per_chunk.cend()) {
-      referencing_chunk->increase_invalid_row_count(num_rows_deleted->second);
+      auto referenced_chunk = referenced_table->get_chunk(num_rows_deleted->first);
+      referenced_chunk->increase_invalid_row_count(num_rows_deleted->second);
     }
   }
 }
