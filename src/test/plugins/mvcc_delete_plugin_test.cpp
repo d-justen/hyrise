@@ -162,10 +162,66 @@ TEST_F(MvccDeletePluginTest, PhysicalDeleteWithNegativePrecondition) {
   EXPECT_FALSE(_delete_chunk_physically(_table_name, chunk_to_delete_id));
 }
 
+TEST_F(MvccDeletePluginTest, LogicalDeleteWithFullyInvalidatedChunk) {
+  // const size_t chunk_size = 3;
+
+  // const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  // StorageManager::get().add_table(_table_name, table);
+
+  // auto transaction_context = TransactionManager::get().new_transaction_context();
+  // auto get_table = std::make_shared<GetTable>(_table_name);
+  // get_table->set_transaction_context(transaction_context);
+  // get_table->execute();
+
+  // EXPECT_EQ(get_table->chunk_count() == 1);
+
+  // auto validate_table = std::make_shared<Validate>(get_table);
+  // validate_table->set_transaction_context(transaction_context);
+  // validate_table->execute();
+
+  // auto update_table = std::make_shared<Update>(_table_name, validate_table, validate_table);
+  // update_table->set_transaction_context(transaction_context);
+  // update_table->execute();
+
+  // transaction_context->commit();
+
+  // auto transaction_context2 = TransactionManager::get().new_transaction_context();
+  // auto get_table2 = std::make_shared<GetTable>(_table_name);
+  // get_table2->set_transaction_context(transaction_context2);
+  // get_table2->execute();
+
+  // EXPECT_EQ(get_table2->chunk_count() == 2);
+  
+  // EXPECT_TRUE(_delete_chunk_logically(_table_name, ChunkID{0}));
+
+  // EXPECT_TRUE()
+
+  const size_t chunk_size = 3;
+  ChunkID chunk_to_delete_id{0};
+
+  // Prepare the test
+  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  StorageManager::get().add_table(_table_name, table);
+  EXPECT_EQ(table->chunk_count(), 1);
+
+  // --- invalidate records
+  _increment_all_values_by_one();
+  
+  // --- delete chunk logically
+  EXPECT_EQ(table->chunk_count(), 2);
+  EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_TRUE(_delete_chunk_logically(_table_name, chunk_to_delete_id));
+
+  // Run the test
+  // --- check pre-conditions
+  EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->invalid_row_count(), table->max_chunk_size());
+  EXPECT_NE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+}
+
 TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
   auto& pm = PluginManager::get();
-  pm.load_plugin(build_dylib_path("libMvccPlugin"));
-  pm.unload_plugin("MvccPlugin");
+  pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
+  pm.unload_plugin("MvccDeletePlugin");
 }
 
 }  // namespace opossum
