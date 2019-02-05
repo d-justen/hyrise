@@ -135,6 +135,8 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
 
 void Table::delete_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  DebugAssert(_chunks[chunk_id]->invalid_row_count() == _chunks[chunk_id]->size(),
+              "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
   if (_table_statistics) {
     uint64_t invalidated_rows_count = _chunks[chunk_id]->size();
     _table_statistics->decrease_invalid_row_count(invalidated_rows_count);

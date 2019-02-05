@@ -3,11 +3,12 @@
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <utils/pausable_loop_thread.hpp>
+
 #include "gtest/gtest_prod.h"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"
+#include "utils/pausable_loop_thread.hpp"
 #include "utils/singleton.hpp"
 
 namespace opossum {
@@ -38,16 +39,14 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   static bool _delete_chunk_logically(const std::string& table_name, ChunkID chunk_id);
   static bool _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id);
 
-  static std::shared_ptr<const Table> _get_referencing_table(const std::string& table_name, ChunkID chunk_id);
-
-  std::mutex _mutex;
   std::unique_ptr<PausableLoopThread> _loop_thread_logical_delete, _loop_thread_physical_delete;
 
   StorageManager& _sm;
-  double _delete_threshold_share_invalidated_rows;
+  double _rate_of_invalidated_rows_threshold;
   std::chrono::milliseconds _idle_delay_logical_delete;
   std::chrono::milliseconds _idle_delay_physical_delete;
 
+  std::mutex _mutex_physical_delete_queue;
   std::queue<ChunkSpecifier> _physical_delete_queue;
 };
 
