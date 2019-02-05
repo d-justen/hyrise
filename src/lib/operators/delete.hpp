@@ -32,5 +32,6 @@ class Delete : public AbstractReadWriteOperator {
  private:
   TransactionID _transaction_id;
   std::shared_ptr<const Table> _referencing_table;
+  std::map<ChunkID, uint32_t> _num_rows_deleted_per_chunk;
 };
 }  // namespace opossum
