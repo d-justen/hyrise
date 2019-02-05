@@ -12,7 +12,8 @@ namespace opossum {
 
 MvccDeletePlugin::MvccDeletePlugin()
     : _sm(StorageManager::get()),
-      _rate_of_invalidated_rows_threshold(0.9),
+      _delete_threshold_share_invalidated_rows(0.8),
+      _delete_threshold_commit_diff_factor(1.5),
       _idle_delay_logical_delete(std::chrono::milliseconds(1000)),
       _idle_delay_physical_delete(std::chrono::milliseconds(1000)) {}
 
@@ -44,11 +45,12 @@ void MvccDeletePlugin::_logical_delete_loop() {
     for (ChunkID chunk_id = ChunkID{0}; chunk_id <= max_chunk_id_to_check; chunk_id++) {
       const auto& chunk = table->get_chunk(chunk_id);
       if (chunk && chunk->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID) {
-        // Calculate metric
-        double rate_of_invalidated_rows =
-            static_cast<double>(chunk->invalid_row_count()) / static_cast<double>(chunk->size());
         // Evaluate metric
-        if (_rate_of_invalidated_rows_threshold <= rate_of_invalidated_rows) {
+        const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
+        const CommitID lowest_end_commit_id = *std::min_element(chunk->mvcc_data()->end_cids.begin(), chunk->mvcc_data()->end_cids.end());
+        const double commit_id_difference = static_cast<double>((TransactionManager::get().last_commit_id() - lowest_end_commit_id));
+        if (invalid_row_amount >= _delete_threshold_share_invalidated_rows || commit_id_difference >= _delete_threshold_percentage_chunk_size * table->max_chunk_size()) {//_delete_threshold_percentage_commit_id_difference) {
+          // Trigger logical delete
           _delete_chunk(table_name, chunk_id);
         }
       }
