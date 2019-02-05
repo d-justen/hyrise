@@ -39,6 +39,7 @@ int main() {
 }
 
 void run_benchmark(const bool use_plugin, const size_t updates, const size_t interval, const std::string filename) {
+  std::cout.imbue(std::locale(""));
   if (use_plugin) {
     auto& pm = PluginManager::get();
     pm.load_plugin(std::string(TEST_PLUGIN_DIR) + "libMvccDeletePlugin" + std::string(DYNAMIC_LIBRARY_SUFFIX));
