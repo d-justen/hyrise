@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -42,7 +43,8 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   std::unique_ptr<PausableLoopThread> _loop_thread_logical_delete, _loop_thread_physical_delete;
 
   StorageManager& _sm;
-  double _rate_of_invalidated_rows_threshold;
+  double _delete_threshold_rate_invalidated_rows;
+  double _delete_threshold_commit_diff_factor;
   std::chrono::milliseconds _idle_delay_logical_delete;
   std::chrono::milliseconds _idle_delay_physical_delete;
 
