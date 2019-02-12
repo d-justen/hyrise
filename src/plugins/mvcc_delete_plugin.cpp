@@ -45,11 +45,22 @@ void MvccDeletePlugin::_logical_delete_loop() {
     for (ChunkID chunk_id = ChunkID{0}; chunk_id <= max_chunk_id_to_check; chunk_id++) {
       const auto& chunk = table->get_chunk(chunk_id);
       if (chunk && chunk->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID) {
-        // Evaluate metric
+        
+        // Calculate invalid rows for metric
         const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        const CommitID lowest_end_commit_id = *std::min_element(chunk->mvcc_data()->end_cids.begin(), chunk->mvcc_data()->end_cids.end());
-        const double commit_id_difference = static_cast<double>((TransactionManager::get().last_commit_id() - lowest_end_commit_id));
-        if (invalid_row_amount >= _delete_threshold_share_invalidated_rows || commit_id_difference >= _delete_threshold_percentage_chunk_size * table->max_chunk_size()) {//_delete_threshold_percentage_commit_id_difference) {
+
+        // Calculate commit difference between last commit id set in chunk
+        // and last_commit_id from TransactionManager
+        const CommitID lowest_end_commit_id =
+            *std::min_element(chunk->mvcc_data()->end_cids.begin(), chunk->mvcc_data()->end_cids.end());
+        const double commit_id_difference =
+            static_cast<double>((TransactionManager::get().last_commit_id() - lowest_end_commit_id));
+
+        // Evaluate both metrics
+        if (invalid_row_amount >= _delete_threshold_share_invalidated_rows ||
+            commit_id_difference >=
+                _delete_threshold_commit_diff_factor *
+                    table->max_chunk_size()) {
           // Trigger logical delete
           _delete_chunk(table_name, chunk_id);
         }

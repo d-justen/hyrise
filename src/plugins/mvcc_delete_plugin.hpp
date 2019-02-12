@@ -1,10 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <algorithm>
-#include <utils/pausable_loop_thread.hpp>
 #include "gtest/gtest_prod.h"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
