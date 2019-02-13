@@ -155,7 +155,7 @@ bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, c
                 "At this point, the chunk should be referenced by the "
                 "Table-chunk-vector only.")
         // Usage checks have been passed. Apply physical delete now.
-        table->delete_chunk(chunk_id);
+        table->remove_chunk(chunk_id);
     std::cout << "Deleted chunk " << chunk_id << " physically." << std::endl;
     return true;
   } else {
