@@ -49,6 +49,8 @@ class TransactionContext;
  * The TransactionManager is thread-safe.
  */
 class TransactionManager : public Singleton<TransactionManager> {
+
+  friend class TransactionManagerTest;
  public:
   static void reset();
 
