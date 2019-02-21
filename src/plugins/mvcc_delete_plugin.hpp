@@ -18,8 +18,6 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   friend class MvccDeletePluginCoreTest;
 
  public:
-  MvccDeletePlugin();
-
   const std::string description() const final;
 
   void start() final;
@@ -33,7 +31,7 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
     ChunkSpecifier(std::string table_name, ChunkID chunk_id) : table_name(std::move(table_name)), chunk_id(chunk_id) {}
   };
 
-  void _logical_delete_loop();
+  void _logical_delete_loop(StorageManager& sm);
   void _physical_delete_loop();
 
   void _delete_chunk(const std::string& table_name, ChunkID chunk_id);
@@ -42,14 +40,13 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
 
   std::unique_ptr<PausableLoopThread> _loop_thread_logical_delete, _loop_thread_physical_delete;
 
-  StorageManager& _sm;
-  double _delete_threshold_rate_invalidated_rows;
-  double _delete_threshold_commit_diff_factor;
-  std::chrono::milliseconds _idle_delay_logical_delete;
-  std::chrono::milliseconds _idle_delay_physical_delete;
-
   std::mutex _mutex_physical_delete_queue;
   std::queue<ChunkSpecifier> _physical_delete_queue;
+
+  const double _DELETE_THRESHOLD_RATE_INVALIDATED_ROWS = 0.8;
+  const double _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR = 1.5;
+  const std::chrono::milliseconds _IDLE_DELAY_LOGICAL_DELETE = std::chrono::milliseconds(1000);
+  const std::chrono::milliseconds _IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(1000);
 };
 
 }  // namespace opossum

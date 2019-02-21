@@ -189,7 +189,7 @@ set(
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
-    )
+)
 
 set (
     SYSTEM_TEST_SOURCES
