@@ -57,8 +57,8 @@ class MvccDeletePluginTest : public BaseTest {
   static bool _delete_chunk_logically(const std::string& table_name, ChunkID chunk_id) {
     return MvccDeletePlugin::_delete_chunk_logically(table_name, chunk_id);
   }
-  static bool _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
-    return MvccDeletePlugin::_delete_chunk_physically(table_name, chunk_id);
+  static void _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
+    MvccDeletePlugin::_delete_chunk_physically(table_name, chunk_id);
   }
   static int _get_int_value_from_table(const std::shared_ptr<const Table> table, const ChunkID chunk_id,
                                        const ColumnID column_id, const ChunkOffset chunk_offset) {
@@ -144,28 +144,10 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   EXPECT_NE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
   // --- run physical delete
-  EXPECT_TRUE(_delete_chunk_physically(_table_name, chunk_to_delete_id));
+  _delete_chunk_physically(_table_name, chunk_to_delete_id);
 
   // --- check post-conditions
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
-}
-
-TEST_F(MvccDeletePluginTest, PhysicalDeleteNegativePrecondition_CleanupCommitId) {
-  const size_t chunk_size = 5;
-  ChunkID chunk_to_delete_id{0};
-
-  // Prepare the test
-  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
-  StorageManager::get().add_table(_table_name, table);
-  // --- invalidate records
-  _increment_all_values_by_one();
-
-  // Run the test
-  // --- check pre-conditions
-  EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
-
-  // --- run physical delete
-  EXPECT_FALSE(_delete_chunk_physically(_table_name, chunk_to_delete_id));
 }
 
 }  // namespace opossum

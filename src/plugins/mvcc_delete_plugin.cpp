@@ -1,5 +1,6 @@
 #include "mvcc_delete_plugin.hpp"
 
+#include "numeric"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
@@ -13,8 +14,8 @@ namespace opossum {
 const std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
 
 void MvccDeletePlugin::start() {
-  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(
-      _IDLE_DELAY_LOGICAL_DELETE, [&](size_t) { _logical_delete_loop(StorageManager::get()); });
+  _loop_thread_logical_delete =
+      std::make_unique<PausableLoopThread>(_IDLE_DELAY_LOGICAL_DELETE, [&](size_t) { _logical_delete_loop(); });
 
   _loop_thread_physical_delete =
       std::make_unique<PausableLoopThread>(_IDLE_DELAY_PHYSICAL_DELETE, [&](size_t) { _physical_delete_loop(); });
@@ -30,8 +31,8 @@ void MvccDeletePlugin::stop() {
  * This function analyzes each chunk of every table and triggers a chunk-cleanup-procedure if a certain threshold of
  * invalidated rows is exceeded.
  */
-void MvccDeletePlugin::_logical_delete_loop(StorageManager& sm) {
-  for (auto& [table_name, table] : sm.tables()) {
+void MvccDeletePlugin::_logical_delete_loop() {
+  for (auto& [table_name, table] : StorageManager::get().tables()) {
     // Check all chunks, except for the last one, which is currently used for insertions
     const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
 
@@ -51,7 +52,22 @@ void MvccDeletePlugin::_logical_delete_loop(StorageManager& sm) {
         // Evaluate metrics
         const bool criterion1 = _DELETE_THRESHOLD_RATE_INVALIDATED_ROWS <= invalidated_rows_ratio;
         const bool criterion2 = max_commit_id_diff <= commit_id_diff;
-        if (criterion1 || criterion2) _delete_chunk(table_name, chunk_id);
+
+        if (criterion1 && criterion2) {
+          const bool success = _delete_chunk_logically(table_name, chunk_id);
+
+          if (success) {
+            DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id() !=
+                            MvccData::MAX_COMMIT_ID,
+                        "Chunk needs to be deleted logically before deleting it physically.");
+
+            std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
+            _physical_delete_queue.emplace(table_name, chunk_id);
+          } else {
+            std::cout << "Logical delete of chunk " << chunk_id << " failed because of MVCC conflict. Retrying..."
+                      << std::endl;
+          }
+        }
       }
     }  // for each chunk
   }    // for each table
@@ -63,32 +79,19 @@ void MvccDeletePlugin::_logical_delete_loop(StorageManager& sm) {
 void MvccDeletePlugin::_physical_delete_loop() {
   std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
 
-  while (!_physical_delete_queue.empty()) {
-    ChunkSpecifier chunk_spec = _physical_delete_queue.front();
-    bool success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
+  ChunkSpecifier chunk_spec = _physical_delete_queue.front();
+  const auto& table = StorageManager::get().get_table(chunk_spec.table_name);
+  const auto& chunk = table->get_chunk(chunk_spec.chunk_id);
 
-    if (success) {
-      _physical_delete_queue.pop();
-    } else {
-      return;  // wait for more transactions to finish
-    }
-  }
-}
+  DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.");
 
-void MvccDeletePlugin::_delete_chunk(const std::string& table_name, const ChunkID chunk_id) {
-  // Delete chunk logically
-  bool success = _delete_chunk_logically(table_name, chunk_id);
+  // Check whether there are still active transactions that might use the chunk
+  CommitID cleanup_commit_id = chunk->get_cleanup_commit_id();
+  CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
 
-  // Queue physical delete
-  if (success) {
-    DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id() !=
-                    MvccData::MAX_COMMIT_ID,
-                "Chunk needs to be deleted logically before deleting it physically.");
-
-    std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
-    _physical_delete_queue.emplace(table_name, chunk_id);
-  } else {
-    std::cout << "Logical delete of chunk " << chunk_id << " failed because of MVCC conflict. Retrying..." << std::endl;
+  if (cleanup_commit_id < lowest_snapshot_commit_id) {
+    _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
+    _physical_delete_queue.pop();
   }
 }
 
@@ -105,13 +108,9 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   auto gt = std::make_shared<GetTable>(table_name);
   gt->set_transaction_context(transaction_context);
 
-  auto chunk_count = table->chunk_count();
-  std::vector<ChunkID> excluded_chunk_ids;
-  for (ChunkID excluded_chunk_id = ChunkID{0}; excluded_chunk_id < chunk_count; ++excluded_chunk_id) {
-    if (chunk_id != excluded_chunk_id) {
-      excluded_chunk_ids.push_back(excluded_chunk_id);
-    }
-  }
+  std::vector<ChunkID> excluded_chunk_ids(table->chunk_count());
+  std::iota(std::begin(excluded_chunk_ids), std::end(excluded_chunk_ids), 0);
+  excluded_chunk_ids.erase(std::remove(std::begin(excluded_chunk_ids), std::end(excluded_chunk_ids), chunk_id));
 
   gt->set_excluded_chunk_ids(excluded_chunk_ids);
   gt->execute();
@@ -142,27 +141,16 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   }
 }
 
-bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, const ChunkID chunk_id) {
-  const auto& table = StorageManager::get().get_table(table_name);
-  const auto& chunk = table->get_chunk(chunk_id);
+void MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, const ChunkID chunk_id) {
+  const auto table = StorageManager::get().get_table(table_name);
+  const auto chunk = table->get_chunk(chunk_id);
 
-  DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.");
-
-  // Check whether there are still active transactions that might use the chunk
-  CommitID cleanup_commit_id = chunk->get_cleanup_commit_id();
-  CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
-  if (cleanup_commit_id < lowest_snapshot_commit_id) {
-    DebugAssert(chunk.use_count() == 2,
-                "At this point, the chunk should be referenced by the plugin and the "
-                "Table-chunk-vector only.");
-    // Usage checks have been passed. Apply physical delete now.
-    table->remove_chunk(chunk_id);
-    std::cout << "Deleted chunk " << chunk_id << " physically." << std::endl;
-    return true;
-  } else {
-    // Chunk might still be in use. Wait with physical delete.
-    return false;
-  }
+  DebugAssert(chunk.use_count() == 2,
+              "At this point, the chunk should be referenced by the plugin and the "
+              "Table-chunk-vector only.");
+  // Usage checks have been passed. Apply physical delete now.
+  table->remove_chunk(chunk_id);
+  std::cout << "Deleted chunk " << chunk_id << " of table " << table_name << " physically." << std::endl;
 }
 
 EXPORT_PLUGIN(MvccDeletePlugin)
