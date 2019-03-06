@@ -101,13 +101,13 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{3}), 2);
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{4}), 3);
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{0}), 4);
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_FALSE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
 
   // Delete chunk logically
   EXPECT_TRUE(_delete_chunk_logically(_table_name, ChunkID{0}));
 
   // Check Post-Conditions
-  EXPECT_NE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_TRUE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
   // --- Check table structure
   // --- Expected: _, _, _, _, _ | 4, 2, 3
   EXPECT_EQ(table->chunk_count(), 2);
@@ -136,12 +136,12 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   // --- invalidate records
   _increment_all_values_by_one();
   // --- delete chunk logically
-  EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_FALSE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id());
   EXPECT_TRUE(_delete_chunk_logically(_table_name, chunk_to_delete_id));
 
   // Run the test
   // --- check pre-conditions
-  EXPECT_NE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_TRUE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
 
   // --- run physical delete
   _delete_chunk_physically(_table_name, chunk_to_delete_id);
