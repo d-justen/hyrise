@@ -47,7 +47,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
             *std::min_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids));
         const CommitID commit_id_diff = TransactionManager::get().last_commit_id() - lowest_end_commit_id;
         const CommitID max_commit_id_diff =
-            table->max_chunk_size() * static_cast<CommitID>(_DELETE_THRESHOLD_COMMIT_DIFF_FACTOR);
+            static_cast<CommitID>(table->max_chunk_size() * _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR);
 
         // Evaluate metrics
         const bool criterion1 = _DELETE_THRESHOLD_RATE_INVALIDATED_ROWS <= invalidated_rows_ratio;
@@ -143,15 +143,16 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
 }
 
 void MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, const ChunkID chunk_id) {
-  const auto table = StorageManager::get().get_table(table_name);
-  const auto chunk = table->get_chunk(chunk_id);
+  const auto& table = StorageManager::get().get_table(table_name);
+  const auto& chunk = table->get_chunk(chunk_id);
 
   DebugAssert(chunk.use_count() == 2,
               "At this point, the chunk should be referenced by the plugin and the "
               "Table-chunk-vector only.");
-  DebugAssert(chunk.get_cleanup_commit_id(), "The cleanup commit id of the chunk is not set. "
+  DebugAssert(chunk->get_cleanup_commit_id(),
+              "The cleanup commit id of the chunk is not set. "
               "This should have been done by the logical delete.");
-  
+
   // Usage checks have been passed. Apply physical delete now.
   table->remove_chunk(chunk_id);
   std::cout << "Deleted chunk " << chunk_id << " of table " << table_name << " physically." << std::endl;
