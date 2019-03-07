@@ -84,12 +84,16 @@ void MvccDeletePlugin::_physical_delete_loop() {
 
   DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.");
 
-  // Check whether there are still active transactions that might use the chunk
-  if (chunk->get_cleanup_commit_id()) {
-    CommitID cleanup_commit_id = chunk->get_cleanup_commit_id().value();
-    CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+  if (chunk->get_cleanup_commit_id().has_value()) {
 
-    if (cleanup_commit_id < lowest_snapshot_commit_id) {
+    // Check whether there are still active transactions that might use the chunk
+    bool conflicting_transactions = false;
+    auto lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+    if(lowest_snapshot_commit_id.has_value()) {
+      conflicting_transactions = chunk->get_cleanup_commit_id().value() < lowest_snapshot_commit_id.value();
+    }
+
+    if (!conflicting_transactions) {
       _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
       _physical_delete_queue.pop();
     }
