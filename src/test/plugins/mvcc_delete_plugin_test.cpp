@@ -54,15 +54,15 @@ class MvccDeletePluginTest : public BaseTest {
 
     transaction_context->commit();
   }
-  static bool _delete_chunk_logically(const std::string& table_name, ChunkID chunk_id) {
-    return MvccDeletePlugin::_delete_chunk_logically(table_name, chunk_id);
+  static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id) {
+    return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id);
   }
   static void _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
-    MvccDeletePlugin::_delete_chunk_physically(table_name, chunk_id);
+    MvccDeletePlugin::_delete_chunk_physically(StorageManager::get().get_table(table_name), chunk_id);
   }
-  static int _get_int_value_from_table(const std::shared_ptr<const Table> table, const ChunkID chunk_id,
+  static int _get_int_value_from_table(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
                                        const ColumnID column_id, const ChunkOffset chunk_offset) {
-    const auto segment = table->get_chunk(chunk_id)->get_segment(column_id);
+    const auto& segment = table->get_chunk(chunk_id)->get_segment(column_id);
     const auto& value_alltype = static_cast<const AllTypeVariant&>((*segment)[chunk_offset]);
     return boost::lexical_cast<int>(value_alltype);
   }
@@ -104,7 +104,7 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   EXPECT_FALSE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
 
   // Delete chunk logically
-  EXPECT_TRUE(_delete_chunk_logically(_table_name, ChunkID{0}));
+  EXPECT_TRUE(_try_logical_delete(_table_name, ChunkID{0}));
 
   // Check Post-Conditions
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
@@ -137,7 +137,7 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   _increment_all_values_by_one();
   // --- delete chunk logically
   EXPECT_FALSE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id());
-  EXPECT_TRUE(_delete_chunk_logically(_table_name, chunk_to_delete_id));
+  EXPECT_TRUE(_try_logical_delete(_table_name, chunk_to_delete_id));
 
   // Run the test
   // --- check pre-conditions
