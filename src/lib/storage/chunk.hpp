@@ -13,10 +13,8 @@
 #include <string>
 #include <vector>
 
-#include "index/segment_index_type.hpp"
-
 #include "all_type_variant.hpp"
-#include "concurrency/transaction_manager.hpp"
+#include "index/segment_index_type.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"

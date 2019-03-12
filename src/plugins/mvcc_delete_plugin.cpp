@@ -1,5 +1,6 @@
 #include "mvcc_delete_plugin.hpp"
 
+#include "concurrency/transaction_manager.hpp"
 #include "numeric"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
@@ -48,7 +49,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
           const CommitID lowest_end_commit_id =
               *std::min_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids));
           const CommitID commit_id_diff = TransactionManager::get().last_commit_id() - lowest_end_commit_id;
-          const CommitID max_commit_id_diff =
+          auto max_commit_id_diff =
               static_cast<CommitID>(table->max_chunk_size() * _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR);
           const bool criterion2 = max_commit_id_diff <= commit_id_diff;
 
