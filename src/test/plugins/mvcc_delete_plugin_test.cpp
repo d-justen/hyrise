@@ -31,6 +31,7 @@ class MvccDeletePluginTest : public BaseTest {
 
   void TearDown() override { StorageManager::reset(); }
 
+
  protected:
   void _increment_all_values_by_one() {
     auto transaction_context = TransactionManager::get().new_transaction_context();

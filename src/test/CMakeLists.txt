@@ -199,6 +199,9 @@ set (
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
+    plugins/mvcc_delete_plugin_system_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -273,7 +276,7 @@ if (${ENABLE_JIT_SUPPORT})
 
     set(SYSTEM_TEST_SOURCES
         ${SYSTEM_TEST_SOURCES}
-        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp
+        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp        
     )
 endif()
 
@@ -305,6 +308,7 @@ target_link_libraries(hyriseTest hyrise MvccDeletePlugin ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+add_dependencies(hyriseSystemTest MvccDeletePlugin)
+target_link_libraries(hyriseSystemTest hyrise MvccDeletePlugin hyriseBenchmarkLib ${LIBRARIES})
 target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)
