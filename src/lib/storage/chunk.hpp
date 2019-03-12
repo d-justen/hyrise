@@ -157,12 +157,12 @@ class Chunk : private Noncopyable {
   uint64_t invalid_row_count() const { return _invalid_row_count; }
 
   /**
-   * The MvccDeletePlugin implements a logical chunk deletion (full chunk invalidation) as a transaction.
-   * In case a clean-up transaction has been performed successfully, its commit id will be returned via
-   * this function. Otherwise, an empty _cleanup_commit_id is returned.
-   * The _cleanup_commit_id is used to determine if the chunk got already fully invalidated by the logical
-   * delete and can be physically deleted.
-   */
+    * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+    * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+    * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+    * have to look at this chunk anymore.
+    * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+    */
   const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
