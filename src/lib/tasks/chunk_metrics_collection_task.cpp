@@ -17,8 +17,10 @@ void ChunkMetricsCollectionTask::_on_execute() {
     const auto& table = table_pair.second;
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
       const auto chunk = table->get_chunk(i);
-      if (const auto access_counter = chunk->access_counter()) {
-        access_counter->process();
+      if (chunk) {
+        if (const auto access_counter = chunk->access_counter()) {
+          access_counter->process();
+        }
       }
     }
   }

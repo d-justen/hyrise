@@ -78,7 +78,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
 void MvccDeletePlugin::_physical_delete_loop() {
   std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
 
-  if(_physical_delete_queue.size()) {
+  if (_physical_delete_queue.size()) {
     TableAndChunkID table_and_chunk_id = _physical_delete_queue.front();
     const auto& table = table_and_chunk_id.first;
     const auto& chunk = table->get_chunk(table_and_chunk_id.second);
@@ -89,9 +89,9 @@ void MvccDeletePlugin::_physical_delete_loop() {
       // Check whether there are still active transactions that might use the chunk
       bool conflicting_transactions = false;
       auto lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
-      
+
       if (lowest_snapshot_commit_id.has_value()) {
-        conflicting_transactions = chunk->get_cleanup_commit_id().value() < lowest_snapshot_commit_id.value();
+        conflicting_transactions = chunk->get_cleanup_commit_id().value() > lowest_snapshot_commit_id.value();
       }
 
       if (!conflicting_transactions) {
@@ -151,7 +151,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
 void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& table, const ChunkID chunk_id) {
   const auto& chunk = table->get_chunk(chunk_id);
 
-  Assert(chunk.use_count() == 2,
+  Assert(chunk.use_count() == 3,
          "At this point, the chunk should be referenced by the plugin and the "
          "Table-chunk-vector only.");
   Assert(chunk->get_cleanup_commit_id().has_value(),
