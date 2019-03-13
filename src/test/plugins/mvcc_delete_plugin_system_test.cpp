@@ -30,7 +30,6 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
       std::vector<int> vec;
       vec.reserve(MAX_CHUNK_SIZE);
-      // std::iota(vec.begin(), vec.end(), 0);
       for (size_t i = 0; i < MAX_CHUNK_SIZE; i++) {
         vec.emplace_back(i);
       }
@@ -50,9 +49,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     }
 
   protected:
-
     void check_plugin_activity() {
-
       auto transaction_context = TransactionManager::get().new_transaction_context();
       auto gt = std::make_shared<GetTable>("mvcc_test");
       gt->set_transaction_context(transaction_context);
@@ -61,22 +58,52 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
       const auto& table = gt->get_output();
 
-      for (auto chunk = ChunkID{0}; chunk < table->chunk_count(); ++chunk) {
-        std::cout << "Ratio " << chunk << ": " << table->get_chunk(chunk)->invalid_row_count() / static_cast<double>(table->max_chunk_size()) << std::endl;
-        EXPECT_TRUE((table->get_chunk(chunk)->invalid_row_count() / static_cast<double>(table->max_chunk_size())) < .9);
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto& chunk = table->get_chunk(chunk_id);
+
+        EXPECT_LT((chunk->invalid_row_count() / static_cast<double>(chunk->size())), .9);
+
+        const CommitID lowest_end_commit_id =
+            *std::min_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids));
+        const CommitID commit_id_diff = TransactionManager::get().last_commit_id() - lowest_end_commit_id;
+        const CommitID max_commit_id_diff = static_cast<CommitID>(table->max_chunk_size() * 2.5);
+        
+        EXPECT_LT(commit_id_diff, max_commit_id_diff);
       }
     }
 
-    constexpr static size_t MAX_CHUNK_SIZE = 20'000;
-    constexpr static size_t UPDATES = 200'000;
+    std::unique_ptr<PausableLoopThread> plugin_activity_checker;
+
+    constexpr static size_t MAX_CHUNK_SIZE = 15'000;
+    constexpr static size_t UPDATES = 40'000;
     constexpr static std::chrono::milliseconds PLUGIN_CHECKER_INTERVAL = std::chrono::milliseconds(1000);
+    constexpr static bool CHECK_LIVE = true;
 };
 
+/**
+ * This test was created for the following constants in the mvcc_delete_plugin.hpp:
+ * _DELETE_THRESHOLD_RATE_INVALIDATED_ROWS = .6
+ * _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR = 1.5
+ * _IDLE_DELAY_LOGICAL_DELETE = std::chrono::milliseconds(1000)
+ * _IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(1000)
+ * This test allows some leeway with a chunk invalidation ratio of .9 and a commit "age"
+ * in a chunk of 2 * max_chunk_size, as the logical and physical delete are only 
+ * executed every second.
+*/
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   auto& pm = PluginManager::get();
   pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
-  std::unique_ptr<PausableLoopThread> plugin_activity_checker =
-    std::make_unique<PausableLoopThread>(PLUGIN_CHECKER_INTERVAL, [&](size_t) { check_plugin_activity(); });
+
+  /**
+   * To check the plugin execution live, set CHECK_LIVE to true.
+   * During live checking, it can happen that the following logic error is thrown:
+   * At this point, the chunk should be referenced by the plugin and the Table-chunk-vector only.
+   * This error is thrown, because this test observes the chunks to check them and therefore
+   * creates a third reference.
+  */
+  if (CHECK_LIVE) {
+      plugin_activity_checker = std::make_unique<PausableLoopThread>(PLUGIN_CHECKER_INTERVAL, [&](size_t) { check_plugin_activity(); });
+  }  
 
   const auto tbl = StorageManager::get().get_table("mvcc_test");
   auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
@@ -117,5 +144,5 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   }
   PluginManager::get().unload_plugin("MvccDeletePlugin");
 
-  //EXPECT_FALSE();
+  check_plugin_activity();
 }
