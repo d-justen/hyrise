@@ -51,7 +51,6 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
  protected:
   void update_table() {
-    const auto tbl = StorageManager::get().get_table("mvcc_test");
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
     auto& tm = TransactionManager::get();
@@ -88,7 +87,8 @@ class MvccDeletePluginSystemTest : public BaseTest {
   size_t deleted_chunks = 0;
   uint64_t counter = 0;
 
-  constexpr static size_t MAX_CHUNK_SIZE = 20'000;
+  constexpr static size_t MAX_CHUNK_SIZE = 200;
+  constexpr static size_t PHYSICALLY_DELETED_CHUNKS_COUNT = 2;
 };
 
 /**
@@ -97,29 +97,72 @@ class MvccDeletePluginSystemTest : public BaseTest {
  * These nullptrs are created when the plugin successfully deleted a chunk.
  */
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
+
+  // {
+  // // This thread updates the table continuously
+  // std::unique_ptr<PausableLoopThread> table_update_thread =
+  //     std::make_unique<PausableLoopThread>(std::chrono::milliseconds(0), [&](size_t) { update_table(); });
+  // }
+
+  auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
+
+  auto& tm = TransactionManager::get();
+
+  for (int i = 0; i < 30000; ++i)
+  {
+    const auto transaction_context = tm.new_transaction_context();
+    const auto value = static_cast<int>(i % (MAX_CHUNK_SIZE));
+    const auto expr = expression_functional::equals_(column, value);
+
+    const auto gt = std::make_shared<GetTable>("mvcc_test");
+    gt->set_transaction_context(transaction_context);
+
+    const auto validate = std::make_shared<Validate>(gt);
+    validate->set_transaction_context(transaction_context);
+
+    const auto where = std::make_shared<TableScan>(validate, expr);
+    where->set_transaction_context(transaction_context);
+
+    const auto update = std::make_shared<Update>("mvcc_test", where, where);
+    update->set_transaction_context(transaction_context);
+
+    gt->execute();
+    validate->execute();
+    where->execute();
+    update->execute();
+
+    if (!update->execute_failed()) {
+      transaction_context->commit();
+    } else {
+      transaction_context->rollback();
+      counter--;
+    }
+  }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+
   auto& pm = PluginManager::get();
   pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
 
-  // This thread updates the table continuously
-  std::unique_ptr<PausableLoopThread> table_update_thread =
-      std::make_unique<PausableLoopThread>(std::chrono::milliseconds(0), [&](size_t) { update_table(); });
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-  while (deleted_chunks < 5) {
-    deleted_chunks = 0;
+  // while (deleted_chunks < PHYSICALLY_DELETED_CHUNKS_COUNT) {
+  //   deleted_chunks = 0;
 
-    const auto table = StorageManager::get().get_table("mvcc_test");
+  //   // const auto table = StorageManager::get().get_table("mvcc_test");
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      if (!table->get_chunk(chunk_id)) {
-        deleted_chunks++;
-      } else {
-        // std::cout << "Ratio " << chunk_id << ": "
-        //           << (table->get_chunk(chunk_id)->invalid_row_count() /
-        //               static_cast<double>(table->get_chunk(chunk_id)->size()))
-        //           << std::endl;
-      }
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  }
+  //   // for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  //   //   if (!table->get_chunk(chunk_id)) {
+  //   //     deleted_chunks++;
+  //   //   } else {
+  //   //     // std::cout << "Ratio " << chunk_id << ": "
+  //   //     //           << (table->get_chunk(chunk_id)->invalid_row_count() /
+  //   //     //               static_cast<double>(table->get_chunk(chunk_id)->size()))
+  //   //     //           << std::endl;
+  //   //   }
+  //   // }
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  // }
   PluginManager::get().unload_plugin("MvccDeletePlugin");
 }
