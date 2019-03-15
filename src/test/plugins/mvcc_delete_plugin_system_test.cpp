@@ -18,6 +18,7 @@
 #include "types.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/plugin_test_utils.hpp"
+#include "utils/pausable_loop_thread.hpp"
 
 using namespace opossum;  // NOLINT
 
