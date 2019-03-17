@@ -1,7 +1,6 @@
 #include "mvcc_delete_plugin.hpp"
 
 #include "concurrency/transaction_manager.hpp"
-#include "numeric"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
