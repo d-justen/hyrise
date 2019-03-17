@@ -14,14 +14,10 @@ add_executable(
     hyrisePlayground
 
     playground.cpp
-    ../lib/utils/pausable_loop_thread.cpp
-    ../lib/utils/pausable_loop_thread.hpp
 )
-add_dependencies(hyrisePlayground MvccDeletePlugin)
 target_link_libraries(
     hyrisePlayground
     hyrise
-    MvccDeletePlugin
 )
 
 # Configure tpchTableGenerator
