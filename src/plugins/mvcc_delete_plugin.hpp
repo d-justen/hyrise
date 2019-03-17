@@ -40,8 +40,8 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
 
   constexpr static double _DELETE_THRESHOLD_RATE_INVALIDATED_ROWS = 0.6;
   constexpr static double _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR = 1.5;
-  constexpr static std::chrono::milliseconds _IDLE_DELAY_LOGICAL_DELETE = std::chrono::milliseconds(1000);
-  constexpr static std::chrono::milliseconds _IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(1000);
+  constexpr static std::chrono::milliseconds _IDLE_DELAY_LOGICAL_DELETE = std::chrono::milliseconds(900);
+  constexpr static std::chrono::milliseconds _IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(900);
 };
 
 }  // namespace opossum

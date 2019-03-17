@@ -31,7 +31,6 @@ class MvccDeletePluginTest : public BaseTest {
 
   void TearDown() override { StorageManager::reset(); }
 
-
  protected:
   void _increment_all_values_by_one() {
     auto transaction_context = TransactionManager::get().new_transaction_context();
@@ -132,12 +131,13 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   ChunkID chunk_to_delete_id{0};
 
   // Prepare the test
-  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  const auto& table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  const auto& chunk = table->get_chunk(chunk_to_delete_id);
   StorageManager::get().add_table(_table_name, table);
   // --- invalidate records
   _increment_all_values_by_one();
   // --- delete chunk logically
-  EXPECT_FALSE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id());
+  EXPECT_FALSE(chunk->get_cleanup_commit_id());
   EXPECT_TRUE(_try_logical_delete(_table_name, chunk_to_delete_id));
 
   // Run the test
