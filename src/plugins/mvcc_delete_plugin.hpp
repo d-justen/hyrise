@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <mutex>
+#include <numeric>
 #include <queue>
 #include <thread>
-#include <numeric>
 
 #include "gtest/gtest_prod.h"
 #include "storage/chunk.hpp"

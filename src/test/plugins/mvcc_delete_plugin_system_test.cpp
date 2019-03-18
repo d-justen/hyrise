@@ -57,7 +57,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     auto& tm = TransactionManager::get();
 
     const auto transaction_context = tm.new_transaction_context();
-    const auto value = static_cast<int>(counter++ % (MAX_CHUNK_SIZE));
+    const auto value = static_cast<int>(_counter++ % (MAX_CHUNK_SIZE));
     const auto expr = expression_functional::equals_(column, value);
 
     const auto gt = std::make_shared<GetTable>("mvcc_test");
@@ -81,20 +81,26 @@ class MvccDeletePluginSystemTest : public BaseTest {
       transaction_context->commit();
     } else {
       transaction_context->rollback();
-      counter--;
+      _counter--;
     }
   }
 
   constexpr static size_t MAX_CHUNK_SIZE = 200;
+
   constexpr static size_t PHYSICALLY_DELETED_CHUNKS_COUNT = 3;
-  size_t deleted_chunks = 0;
-  uint64_t counter = 0;
+  constexpr static size_t MAX_UPDATES = MAX_CHUNK_SIZE * 1000;
+  constexpr static size_t LOOP_COUNT = 10;
+
+  size_t _deleted_chunks = 0;
+  uint64_t _counter = 0;
 };
 
 /**
  * This test checks the number of physically deleted chunks, which means
  * nullptrs in the table.
  * These nullptrs are created when the plugin successfully deleted a chunk.
+ * This test was designed for _IDLE_DELAY_LOGICAL_DELETE = _IDLE_DELAY_PHYSICAL_DELETE = 1000
+ * and may fail if these constants are changed in the MvccDeletePlugin.
  */
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   auto& pm = PluginManager::get();
@@ -104,17 +110,21 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   std::unique_ptr<PausableLoopThread> table_update_thread =
       std::make_unique<PausableLoopThread>(std::chrono::milliseconds(0), [&](size_t) { update_table(); });
 
-  while (deleted_chunks < PHYSICALLY_DELETED_CHUNKS_COUNT) {
+  for (size_t loop_count = 0;
+       _deleted_chunks < PHYSICALLY_DELETED_CHUNKS_COUNT && (_counter < MAX_UPDATES || loop_count < LOOP_COUNT);
+       ++loop_count) {
     const auto table = StorageManager::get().get_table("mvcc_test");
-    deleted_chunks = 0;
+    _deleted_chunks = 0;
 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)) {
-        deleted_chunks++;
+        _deleted_chunks++;
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
+
+  EXPECT_GT(_deleted_chunks, 0);
 
   PluginManager::get().unload_plugin("MvccDeletePlugin");
 }
