@@ -77,6 +77,15 @@ TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
   pm.unload_plugin("MvccDeletePlugin");
 }
 
+/**
+ * This test checks the logical delete. All values in the table are incremented to
+ * generate three invalidated rows and create a second chunk. Before the logical delete
+ * is performed, the first chunk contains a mix of valid and invalidated lines. After
+ * the logical delete, all its rows are invalidated and a cleanup_commit_id was set,
+ * which is used for the physical delete. The values are now located in the
+ * second chunk. When fetching the table now, the fully invalidated chunk is not
+ * visible anymore for transactions.
+ */
 TEST_F(MvccDeletePluginTest, LogicalDelete) {
   const size_t chunk_size = 5;
 
@@ -124,8 +133,15 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
   EXPECT_EQ(validate_table->get_output()->row_count(), 3);
+  EXPECT_EQ(validate_table->get_output()->chunk_count(), 1);
 }
 
+/**
+ * This test checks the physical delete of the MvccDeletePlugin. At first,
+ * the logical delete is performed as described in the former test. Afterwards,
+ * the first chunk has a cleanup_commit_id and can be deleted physically. After
+ * the physical delete, the table returns a nullptr when getting the chunk.
+ */
 TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   const size_t chunk_size = 5;
   ChunkID chunk_to_delete_id{0};

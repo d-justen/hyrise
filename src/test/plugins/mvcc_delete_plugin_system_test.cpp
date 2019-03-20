@@ -119,6 +119,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)) {
         _deleted_chunks++;
+      } else {
+        std::cout << chunk_id << " " << table->get_chunk(chunk_id)->invalid_row_count() << std::endl;
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
