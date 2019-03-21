@@ -88,11 +88,12 @@ class MvccDeletePluginSystemTest : public BaseTest {
   constexpr static size_t MAX_CHUNK_SIZE = 200;
 
   constexpr static size_t PHYSICALLY_DELETED_CHUNKS_COUNT = 3;
-  constexpr static size_t MAX_UPDATES = MAX_CHUNK_SIZE * 1000;
+  constexpr static size_t MAX_ROWS = MAX_CHUNK_SIZE * 1000;
   constexpr static size_t LOOP_COUNT = 10;
 
   size_t _deleted_chunks = 0;
-  uint64_t _counter = 0;
+  size_t _counter = 0;
+  size_t _rows = 0;
 };
 
 /**
@@ -111,19 +112,18 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       std::make_unique<PausableLoopThread>(std::chrono::milliseconds(0), [&](size_t) { update_table(); });
 
   for (size_t loop_count = 0;
-       _deleted_chunks < PHYSICALLY_DELETED_CHUNKS_COUNT && (_counter < MAX_UPDATES || loop_count < LOOP_COUNT);
+       _deleted_chunks < PHYSICALLY_DELETED_CHUNKS_COUNT && (_rows < MAX_ROWS || loop_count < LOOP_COUNT);
        ++loop_count) {
     const auto table = StorageManager::get().get_table("mvcc_test");
     _deleted_chunks = 0;
+    _rows = table->row_count();
 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)) {
         _deleted_chunks++;
-      } else {
-        std::cout << chunk_id << " " << table->get_chunk(chunk_id)->invalid_row_count() << std::endl;
       }
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
   }
 
   EXPECT_GT(_deleted_chunks, 0);

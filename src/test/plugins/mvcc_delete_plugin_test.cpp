@@ -29,7 +29,10 @@ class MvccDeletePluginTest : public BaseTest {
 
   void SetUp() override {}  // managed by each test individually
 
-  void TearDown() override { StorageManager::reset(); }
+  void TearDown() override {
+    StorageManager::reset();
+    PluginManager::reset();
+  }
 
  protected:
   void _increment_all_values_by_one() {
@@ -82,8 +85,8 @@ TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
  * generate three invalidated rows and create a second chunk. Before the logical delete
  * is performed, the first chunk contains a mix of valid and invalidated lines. After
  * the logical delete, all its rows are invalidated and a cleanup_commit_id was set,
- * which is used for the physical delete. The values are now located in the
- * second chunk. When fetching the table now, the fully invalidated chunk is not
+ * which is used for the physical delete. All values are now located in the
+ * second chunk. When fetching the table, the fully invalidated chunk is not
  * visible anymore for transactions.
  */
 TEST_F(MvccDeletePluginTest, LogicalDelete) {
