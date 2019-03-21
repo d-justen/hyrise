@@ -88,7 +88,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
   constexpr static size_t MAX_CHUNK_SIZE = 200;
 
   constexpr static size_t PHYSICALLY_DELETED_CHUNKS_COUNT = 3;
-  constexpr static size_t MAX_ROWS = MAX_CHUNK_SIZE * 1000;
+  constexpr static size_t MAX_ROWS = MAX_CHUNK_SIZE * 400;
   constexpr static size_t LOOP_COUNT = 10;
 
   size_t _deleted_chunks = 0;
