@@ -51,7 +51,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   if (HYRISE_DEBUG && !transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-      DebugAssert(original_table->get_chunk(chunk_id) && !original_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
+      DebugAssert(original_table->get_chunk(chunk_id) && original_table->get_chunk(chunk_id)->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID,
                   "For tables with physically deleted chunks, the transaction context must be set.");
     }
   }
@@ -61,8 +61,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
       const auto chunk = original_table->get_chunk(chunk_id);
 
-      if (!chunk || (chunk->get_cleanup_commit_id() &&
-                     *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
+      if (!chunk || (chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
         temp_excluded_chunk_ids.emplace_back(chunk_id);
       }
     }
