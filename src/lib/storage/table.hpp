@@ -81,13 +81,14 @@ class Table : private Noncopyable {
    * @defgroup Accessing and adding Chunks
    * @{
    */
-  // returns the number of chunks (cannot exceed ChunkID (uint32_t))
+  // Returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
   // Returns all Chunks
   const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
 
-  // returns the chunk with the given id
+  // Returns the chunk with the given id.
+  // Please note: If the chunk has been deleted physically, a null pointer is returned.
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
