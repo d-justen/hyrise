@@ -39,6 +39,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   // Iterating over all chunks and for each chunk over all segments
   for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
     auto chunk = input_table_right()->get_chunk(chunk_id);
+    if(!chunk) continue;
+
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
     for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); column_id++) {
@@ -67,6 +69,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   // Iterating over all chunks and for each chunk over all segment
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
+    if(!in_chunk) continue;
 
     Segments output_segments;
 
@@ -77,7 +80,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       const auto base_segment = in_chunk->get_segment(column_id);
       // temporary variables needed to create the reference segment
       const auto referenced_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
-          input_table_left()->get_chunk(chunk_id)->get_segment(column_id));
+          in_chunk->get_segment(column_id));
       auto out_column_id = column_id;
       auto out_referenced_table = input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
