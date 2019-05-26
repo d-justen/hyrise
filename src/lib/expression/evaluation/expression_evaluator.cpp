@@ -1528,7 +1528,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& chunk = table->get_chunk(chunk_id);
-        if(!chunk) continue;
+        if (!chunk) continue;
         const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
           if (position.is_null()) {
@@ -1542,7 +1542,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     } else {
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& chunk = table->get_chunk(chunk_id);
-        if(!chunk) continue;
+        if (!chunk) continue;
         const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
           result_values[chunk_offset] = position.value();

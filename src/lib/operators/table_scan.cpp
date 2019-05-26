@@ -94,7 +94,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
     const auto& chunk_in = in_table->get_chunk(chunk_id);
-    if(!chunk_in) continue;
+    if (!chunk_in) continue;
 
     auto job_task = std::make_shared<JobTask>([=, &output_mutex, &output_chunks]() {
       const auto& chunk_guard = in_table->get_chunk(chunk_id);
@@ -117,8 +117,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (in_table->type() == TableType::References) {
-
-
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {

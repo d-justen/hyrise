@@ -68,7 +68,7 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
     if (!chunk) continue;
 
     const auto& segment = chunk->get_segment(column_id);
-      accessors[chunk_id] = create_segment_accessor<T>(segment);
+    accessors[chunk_id] = create_segment_accessor<T>(segment);
   }
 
   return accessors;

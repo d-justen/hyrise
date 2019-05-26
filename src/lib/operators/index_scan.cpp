@@ -42,14 +42,14 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   if (_included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
     for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
-      if(_in_table->get_chunk(chunk_id)) {
+      if (_in_table->get_chunk(chunk_id)) {
         jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
       }
     }
   } else {
     jobs.reserve(_included_chunk_ids.size());
     for (auto chunk_id : _included_chunk_ids) {
-      if(_in_table->get_chunk(chunk_id)) {
+      if (_in_table->get_chunk(chunk_id)) {
         jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
       }
     }

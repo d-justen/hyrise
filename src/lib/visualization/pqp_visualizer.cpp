@@ -66,7 +66,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
       _visualize_subqueries(op, limit->row_count_expression(), visualized_ops);
     } break;
 
-    default: {}  // OperatorType has no expressions
+    default: {
+    }  // OperatorType has no expressions
   }
 }
 

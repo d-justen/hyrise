@@ -30,7 +30,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
     // iterating over all chunks of table input
     for (ChunkID in_chunk_id{0}; in_chunk_id < input->chunk_count(); in_chunk_id++) {
       const auto& chunk = input->get_chunk(in_chunk_id);
-      if(!chunk) continue;
+      if (!chunk) continue;
 
       // creating empty chunk to add segments with positions
       Segments output_segments;

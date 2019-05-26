@@ -22,7 +22,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     auto chunk = table->get_chunk(chunk_id);
-    if(chunk) {
+    if (chunk) {
       Assert(chunk->has_mvcc_data(), "Table must have MVCC data.");
     }
   }

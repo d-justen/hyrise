@@ -28,7 +28,7 @@ void ChunkCompressionTask::_on_execute() {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
     auto chunk = table->get_chunk(chunk_id);
-    if(chunk) {
+    if (chunk) {
       DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
                   "Chunk is not completed and thus can’t be compressed.");
 

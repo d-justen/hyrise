@@ -65,7 +65,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     const auto& chunk_in = in_table->get_chunk(chunk_id);
-    if(!chunk_in) continue;
+    if (!chunk_in) continue;
 
     Segments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
