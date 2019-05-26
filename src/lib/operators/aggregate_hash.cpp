@@ -301,7 +301,7 @@ void AggregateHash::_aggregate() {
 
   // Process Chunks and perform aggregations
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    auto chunk_in& = input_table->get_chunk(chunk_id);
+    const auto& chunk_in = input_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
