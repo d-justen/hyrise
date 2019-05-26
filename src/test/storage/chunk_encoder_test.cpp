@@ -89,7 +89,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTable) {
   ChunkEncoder::encode_all_chunks(_table, chunk_encoding_specs);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto& chunk = _table->get_chunk(chunk_id);
     const auto& spec = chunk_encoding_specs.at(chunk_id);
     verify_encoding(chunk, spec);
   }
@@ -102,7 +102,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTableUsingSameEncoding) {
   ChunkEncoder::encode_all_chunks(_table, segment_encoding_spec);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto& chunk = _table->get_chunk(chunk_id);
     verify_encoding(chunk, chunk_encoding_spec);
   }
 }
@@ -117,7 +117,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   ChunkEncoder::encode_chunks(_table, chunk_ids, chunk_encoding_specs);
 
   for (auto chunk_id : chunk_ids) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto& chunk = _table->get_chunk(chunk_id);
     const auto& spec = chunk_encoding_specs.at(chunk_id);
     verify_encoding(chunk, spec);
   }
@@ -137,7 +137,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
   ChunkEncoder::encode_chunks(_table, chunk_ids, segment_encoding_spec);
 
   for (auto chunk_id : chunk_ids) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto& chunk = _table->get_chunk(chunk_id);
     verify_encoding(chunk, chunk_encoding_spec);
   }
 

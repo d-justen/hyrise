@@ -225,7 +225,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto add = [&](const auto& table) {
     auto current_pos_list = std::shared_ptr<const PosList>();
-    const auto first_chunk = table->get_chunk(ChunkID{0});
+    const auto& first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto segment = first_chunk->get_segment(column_id);
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
@@ -248,7 +248,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
    * in the #if HYRISE_DEBUG block below)
    */
-  const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
+  const auto& first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
     const auto segment = first_chunk_left->get_segment(cluster_begin);
     const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);

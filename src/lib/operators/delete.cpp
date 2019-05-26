@@ -93,7 +93,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 void Delete::_on_commit_records(const CommitID cid) {
   for (ChunkID referencing_chunk_id{0}; referencing_chunk_id < _referencing_table->chunk_count();
        ++referencing_chunk_id) {
-    const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
+    const auto& referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto referencing_segment =
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
@@ -117,7 +117,7 @@ void Delete::_on_commit_records(const CommitID cid) {
 void Delete::_on_rollback_records() {
   for (ChunkID referencing_chunk_id{0}; referencing_chunk_id < _referencing_table->chunk_count();
        ++referencing_chunk_id) {
-    const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
+    const auto& referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto referencing_segment =
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
