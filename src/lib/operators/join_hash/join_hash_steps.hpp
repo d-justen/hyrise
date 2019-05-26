@@ -82,7 +82,7 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     chunk_offsets[chunk_id] = offset;
 
-    const auto chunk = table->get_chunk(chunk_id);
+    const auto& chunk = table->get_chunk(chunk_id);
     if(!chunk) continue;
 
     offset += chunk->size();
@@ -117,11 +117,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(in_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-    const auto chunk = in_table->get_chunk(chunk_id);
+    const auto& chunk = in_table->get_chunk(chunk_id);
     if(!chunk) continue;
 
     jobs.emplace_back(std::make_shared<JobTask>([&, in_table, chunk_id]() {
-      const auto chunk_in = in_table->get_chunk(chunk_id);
+      const auto& chunk_in = in_table->get_chunk(chunk_id);
       if(!chunk) return;
 
 

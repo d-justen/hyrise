@@ -93,11 +93,11 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
-    const auto chunk_in = in_table->get_chunk(chunk_id);
+    const auto& chunk_in = in_table->get_chunk(chunk_id);
     if(!chunk_in) continue;
 
     auto job_task = std::make_shared<JobTask>([=, &output_mutex, &output_chunks]() {
-      const auto chunk_guard = in_table->get_chunk(chunk_id);
+      const auto& chunk_guard = in_table->get_chunk(chunk_id);
       if (!chunk_guard) return;
 
       // The actual scan happens in the sub classes of BaseTableScanImpl

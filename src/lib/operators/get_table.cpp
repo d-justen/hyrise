@@ -59,7 +59,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // Add logically & physically deleted chunks to list of excluded chunks
   if (transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-      const auto chunk = original_table->get_chunk(chunk_id);
+      const auto& chunk = original_table->get_chunk(chunk_id);
 
       if (!chunk || (chunk->get_cleanup_commit_id() &&
                      *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
@@ -81,7 +81,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       std::vector<std::shared_ptr<Chunk>>{original_table->chunk_count() - temp_excluded_chunk_ids.size()};
 
   for (ChunkID chunk_id{0}, output_chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-    const auto chunk = original_table->get_chunk(chunk_id);
+    const auto& chunk = original_table->get_chunk(chunk_id);
     if (chunk && !std::binary_search(temp_excluded_chunk_ids.cbegin(), temp_excluded_chunk_ids.cend(), chunk_id)) {
       output_chunks[output_chunk_id] = chunk;
       output_chunk_id++;

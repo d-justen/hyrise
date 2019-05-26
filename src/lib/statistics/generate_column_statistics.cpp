@@ -31,7 +31,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
   auto max = pmr_string{default_memory};
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto chunk = table.get_chunk(chunk_id);
+    const auto& chunk = table.get_chunk(chunk_id);
     if(!chunk) continue;
     const auto base_segment = chunk->get_segment(column_id);
 
